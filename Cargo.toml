@@ -1,6 +1,6 @@
 [package]
 name = "async-tcp"
-description = ""
+description = "Traits implementable by async versions of TcpListener and TcpStream"
 version = "0.0.0"
 homepage = "https://github.com/r3v2d0g/async-tcp"
 repository = "https://github.com/r3v2d0g/async-tcp.git"
@@ -14,7 +14,6 @@ edition = "2018"
 publish = false
 
 [features]
-default = ["async-net"]
 async-io = ["async-io_", "async-peek/async-io"]
 async-net = ["async-net_", "async-peek/async-net"]
 
