@@ -6,6 +6,11 @@
  *                                                                                                *
  **************************************************************************************************/
 
+// ======================================== Documentation ======================================= \\
+
+//! This crate provides [`TcpListener`] and [`TcpStream`], two traits that can be implemented by
+//! any async versions of [`std::net::TcpListener`] and [`std::net::TcpStream`].
+
 // =========================================== Imports ========================================== \\
 
 #[cfg(feature = "async-io")]
@@ -613,18 +618,28 @@ pub trait TcpStream: AsyncPeek + AsyncRead + AsyncWrite + Sized {
 
 // ============================================ Types =========================================== \\
 
+/// Future returned by the [`TcpListener::bind()`] method.
+///
+/// If you are implementing [`TcpListener`] manually, you can construct a new instance of `Bind`
+/// using its implementation of `From<Pin<Box<dyn Future<Output = Result<Listener>> + Send>>>`.
 pub struct Bind<Listener> {
     fut: Pin<Box<dyn Future<Output = Result<Listener>> + Send>>,
 }
 
+/// Future returned by the [`TcpListener::accept()`] method.
 pub struct Accept<'listener, Listener> {
     listener: &'listener Listener,
 }
 
+/// Stream returned by the [`TcpListener::incoming()`] method.
 pub struct Incoming<'listener, Listener> {
     listener: &'listener Listener,
 }
 
+/// Future returned by the [`TcpStream::connect()`] method.
+///
+/// If you are implementing [`TcpStream`] manually, you can construct a new instance of `Connect`
+/// using its implementation of `From<Pin<Box<dyn Future<Output = Result<Stream>> + Send>>>`.
 pub struct Connect<Stream> {
     fut: Pin<Box<dyn Future<Output = Result<Stream>> + Send>>
 }
