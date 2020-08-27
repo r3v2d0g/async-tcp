@@ -35,8 +35,7 @@ use std::net::{Shutdown, SocketAddr};
 /// TCP connections. Thse can be accepted by calling [`accept()`] or by awaiting items from the
 /// stream of [`incoming`] connections.
 ///
-/// Cloning a [`TcpListener`] creates another handle to the same socket. The socket will be closed
-/// when all handles to it are dropped.
+/// The socket will be closed when all handles to it are dropped.
 ///
 /// The Transmission Control Protocol is specified in [IETF RFC 793].
 ///
@@ -44,7 +43,7 @@ use std::net::{Shutdown, SocketAddr};
 /// [`accept()`]: TcpListener::accept()
 /// [`incoming`]: TcpListener::incoming()
 /// [IETF RFC 793]: https://tools.ietf.org/html/rfc793
-pub trait TcpListener: Clone + Sized {
+pub trait TcpListener: Sized {
     /// The type of a TCP connection created by [`accept`ing] an incoming connection.
     ///
     /// [`accept`ing]: TcpListener::accept()
@@ -284,9 +283,8 @@ pub trait TcpListener: Clone + Sized {
 /// [`TcpStream`] is a bidirectional stream that implements [`AsyncPeek`], [`AsyncRead`] and
 /// [`AsyncWrite`].
 ///
-/// Cloning a [`TcpStream`] creates another handle to the same socket. The socket will be closed
-/// when all handles to it are dropped. The reading and writing portions of the connection can also
-/// be shut down individually with the [`shutdown()`] method.
+/// The socket will be closed when all handles to it are dropped. The reading and writing portions
+/// of the connection can also be shut down individually with the [`shutdown()`] method.
 ///
 /// [`connect`ing]: TcpStream::connect()
 /// [`accept`ing]: TcpListener::accept()
