@@ -96,7 +96,7 @@ pub trait TcpListener: Clone + Sized {
     /// #
     /// # tcp_local_addr(addr, listener)?;
     /// #
-    /// # Result::<()>::Ok(()) });
+    /// # Result::<()>::Ok(()) }).unwrap();
     /// ```
     fn local_addr(&self) -> Result<SocketAddr>;
 
@@ -135,7 +135,7 @@ pub trait TcpListener: Clone + Sized {
     /// # assert_eq!(conn.local_addr()?, stream.peer_addr()?);
     /// # assert_eq!(conn.peer_addr()?, stream.local_addr()?);
     /// #
-    /// # Result::<()>::Ok(()) });
+    /// # Result::<()>::Ok(()) }).unwrap();
     /// ```
     fn accept(&self) -> Accept<Self> {
         Accept { listener: self }
@@ -198,7 +198,7 @@ pub trait TcpListener: Clone + Sized {
     /// # assert_eq!(conn.local_addr()?, stream.peer_addr()?);
     /// # assert_eq!(conn.peer_addr()?, stream.local_addr()?);
     /// #
-    /// # Result::<()>::Ok(()) });
+    /// # Result::<()>::Ok(()) }).unwrap();
     /// ```
     ///
     /// [`accept()`]: TcpListener::accept()
@@ -206,7 +206,7 @@ pub trait TcpListener: Clone + Sized {
         Incoming { listener: self }
     }
 
-    /// Gets the value of the `IP_TTL` option for this socket.
+    /// Gets the value of the `IP_TTL` option on this socket.
     ///
     /// For more information about this option, see [`set_ttl()`].
     ///
@@ -233,7 +233,7 @@ pub trait TcpListener: Clone + Sized {
     /// #
     /// # tcp_ttl(listener)?;
     /// #
-    /// # Result::<()>::Ok(()) });
+    /// # Result::<()>::Ok(()) }).unwrap();
     /// ```
     ///
     /// [`set_ttl()`]: TcpListener::set_ttl()
@@ -266,26 +266,348 @@ pub trait TcpListener: Clone + Sized {
     /// #
     /// # tcp_set_ttl(listener)?;
     /// #
-    /// # Result::<()>::Ok(()) });
+    /// # Result::<()>::Ok(()) }).unwrap();
     /// ```
     fn set_ttl(&self, ttl: u32) -> Result<()>;
 }
 
+/// A TCP stream between a local and a remote socket.
+///
+/// A `TcpStream` can be created by either [`connect`ing] to an endpoint or [`accept`ing] a
+/// connection on a [`TcpListener`].
+///
+/// [`TcpStream`] is a bidirectional stream that implements [`AsyncPeek`], [`AsyncRead`] and
+/// [`AsyncWrite`].
+///
+/// Cloning a [`TcpStream`] creates another handle to the same socket. The socket will be closed
+/// when all handles to it are dropped. The reading and writing portions of the connection can also
+/// be shut down individually with the [`shutdown()`] method.
+///
+/// [`connect`ing]: TcpStream::connect()
+/// [`accept`ing]: TcpListener::accept()
+/// [`shutdown()`]: TcpStream::shutdown()
 pub trait TcpStream: AsyncPeek + AsyncRead + AsyncWrite + Sized {
+    /// Opens a TCP connection to the specified address.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::SocketAddr;
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # async fn tcp_connect() -> Result<impl TcpStream> {
+    /// #
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    /// # assert_eq!(peer_addr, conn.peer_addr()?);
+    /// # assert_eq!(peer_addr, stream.local_addr()?);
+    /// assert_eq!(addr, stream.peer_addr()?);
+    /// #
+    /// # Ok(stream) }
+    /// #
+    /// # smol::block_on(tcp_connect()).unwrap();
+    /// ```
     fn connect(addr: SocketAddr) -> Connect<Self>;
 
+    /// Returns the socket address of the local half of this TCP connection.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # smol::block_on(async {
+    /// #
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::{IpAddr, SocketAddr};
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    ///
+    /// # fn tcp_local_addr<Stream: TcpStream>(stream: Stream) -> Result<()> {
+    /// #
+    /// assert_eq!(stream.local_addr()?.ip(), IpAddr::from_str("127.0.0.1").unwrap());
+    /// #
+    /// # Ok(()) }
+    /// #
+    /// # tcp_local_addr(stream)?;
+    /// #
+    /// # Result::<()>::Ok(()) }).unwrap();
+    /// ```
     fn local_addr(&self) -> Result<SocketAddr>;
 
+    /// Returns the socket address of the remote peer of this TCP connection.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # smol::block_on(async {
+    /// #
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::SocketAddr;
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    ///
+    /// # fn tcp_peer_addr<Stream: TcpStream>(addr: SocketAddr, stream: Stream) -> Result<()> {
+    /// #
+    /// assert_eq!(addr, stream.peer_addr()?);
+    /// #
+    /// # Ok(()) }
+    /// #
+    /// # tcp_peer_addr(addr, stream)?;
+    /// #
+    /// # Result::<()>::Ok(()) }).unwrap();
+    /// ```
     fn peer_addr(&self) -> Result<SocketAddr>;
 
+    /// Shuts down the read half, write half, or both halves of this connection.
+    ///
+    /// This method will cause all pending and future I/O in the given directions to return
+    /// immediately with an appropriate value (see the documentation of [`Shutdown`]).
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # smol::block_on(async {
+    /// #
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::{Shutdown, SocketAddr};
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    ///
+    /// # fn tcp_shutdown<Stream: TcpStream>(stream: Stream) -> Result<()> {
+    /// #
+    /// stream.shutdown(Shutdown::Both)?;
+    /// #
+    /// # Ok(()) }
+    /// #
+    /// # tcp_shutdown(stream)?;
+    /// #
+    /// # Result::<()>::Ok(()) }).unwrap();
+    /// ```
     fn shutdown(&self, how: Shutdown) -> Result<()>;
 
+    /// Gets the value of the `TCP_NODELAY` option on this socket.
+    ///
+    /// For more information about this option, see [`set_nodelay()`].
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # smol::block_on(async {
+    /// #
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::SocketAddr;
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    ///
+    /// # fn tcp_nodelay<Stream: TcpStream>(stream: Stream) -> Result<()> {
+    /// #
+    /// stream.set_nodelay(true)?;
+    /// assert_eq!(stream.nodelay()?, true);
+    /// #
+    /// # Ok(()) }
+    /// #
+    /// # tcp_nodelay(stream)?;
+    /// #
+    /// # Result::<()>::Ok(()) }).unwrap();
+    /// ```
+    ///
+    /// [`set_nodelay()`]: TcpStream::set_nodelay()
     fn nodelay(&self) -> Result<bool>;
 
+    /// Sets the value of `TCP_NODELAY` option on this socket.
+    ///
+    /// If set, this option disables the Nagle algorithm. This means that segments are always sent
+    /// as soon as possible, even if there is only a small amount of data. When not set, data is
+    /// buffered until there is a sufficient amount to send out, thereby avoiding the frequent
+    /// reading of small packets.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # smol::block_on(async {
+    /// #
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::SocketAddr;
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    ///
+    /// # fn tcp_set_nodelay<Stream: TcpStream>(stream: Stream) -> Result<()> {
+    /// #
+    /// stream.set_nodelay(true)?;
+    /// assert_eq!(stream.nodelay()?, true);
+    /// #
+    /// # Ok(()) }
+    /// #
+    /// # tcp_set_nodelay(stream)?;
+    /// #
+    /// # Result::<()>::Ok(()) }).unwrap();
+    /// ```
     fn set_nodelay(&self, nodelay: bool) -> Result<()>;
 
+    /// Gets the value of the `IP_TTL` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ttl()`].
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # smol::block_on(async {
+    /// #
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::SocketAddr;
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    ///
+    /// # fn tcp_ttl<Stream: TcpStream>(stream: Stream) -> Result<()> {
+    /// #
+    /// stream.set_ttl(100)?;
+    /// assert_eq!(stream.ttl()?, 100);
+    /// #
+    /// # Ok(()) }
+    /// #
+    /// # tcp_ttl(stream)?;
+    /// #
+    /// # Result::<()>::Ok(()) }).unwrap();
+    /// ```
+    ///
+    /// [`set_ttl()`]: TcpStream::set_ttl()
     fn ttl(&self) -> Result<u32>;
 
+    /// Sets the value for the `IP_TTL` option on this socket.
+    ///
+    /// This value sets the time-to-live field that is used in every packet sent from this socket.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # smol::block_on(async {
+    /// #
+    /// # use async_net_ as async_net;
+    /// # use async_tcp::TcpListener;
+    /// use async_tcp::TcpStream;
+    /// use std::net::SocketAddr;
+    /// # use std::io::Result;
+    /// use std::str::FromStr;
+    ///
+    /// # let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
+    /// # let listener = async_net::TcpListener::bind(addr).await?;
+    /// # let addr = listener.local_addr()?;
+    /// // let addr = ...;
+    /// #
+    /// # let connect = smol::spawn(async move {
+    /// let stream = async_net::TcpStream::connect(addr).await?;
+    /// # Result::Ok(stream) });
+    /// #
+    /// # let (conn, peer_addr) = listener.accept().await?;
+    /// # let stream = connect.await?;
+    ///
+    /// # fn tcp_set_ttl<Stream: TcpStream>(stream: Stream) -> Result<()> {
+    /// #
+    /// stream.set_ttl(100)?;
+    /// assert_eq!(stream.ttl()?, 100);
+    /// #
+    /// # Ok(()) }
+    /// #
+    /// # tcp_set_ttl(stream)?;
+    /// #
+    /// # Result::<()>::Ok(()) }).unwrap();
+    /// ```
     fn set_ttl(&self, ttl: u32) -> Result<()>;
 }
 
