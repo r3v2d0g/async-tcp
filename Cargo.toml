@@ -14,12 +14,13 @@ edition = "2018"
 publish = false
 
 [features]
+default = ["async-net"]
 async-io = ["async-io_", "async-peek/async-io"]
 async-net = ["async-net_", "async-peek/async-net"]
 
 [dependencies]
 async-peek = "0.3"
-futures-lite = "0.1"
+futures-lite = "1.0"
 
 [dependencies.async-io_]
 package = "async-io"
@@ -32,3 +33,6 @@ package = "async-net"
 version = "1.0"
 optional = true
 default-features = false
+
+[dev-dependencies]
+smol = "0.4"
