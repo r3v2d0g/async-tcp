@@ -1,9 +1,12 @@
 #+OPTIONS: toc:nil
 
-* ~async-tcp~
+* Trais implementable by async version of TcpListener and TcpStream
 [[https://github.com/r3v2d0g/async-tcp/blob/main/LICENSE.txt][https://img.shields.io/crates/l/async-tcp.svg]]
 [[https://crates.io/crates/async-tcp][https://img.shields.io/crates/v/async-tcp.svg]]
 [[https://docs.rs/async-tcp][https://docs.rs/async-tcp/badge.svg]]
+
+This crate provides ~TcpListener~ and ~TcpStream~, two traits that can be implemented by any
+async versions of [[https://doc.rust-lang.org/std/net/struct.TcpListener.html][~std::net::TcpListener~]] and [[https://doc.rust-lang.org/std/net/struct.TcpStream.html][~std::net::TcpStream~]].
 
 ** License
 #+BEGIN_QUOTE
